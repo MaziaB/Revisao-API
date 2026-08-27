@@ -1,0 +1,8 @@
+[project]
+name = "reforço-api"
+version = "0.1.0"
+description = "revisão dos conceitos de api, crud, bd"
+requires-python = ">=3.10"
+
+[tool.poetry.dependencies]
+fastapi = {extras = ["standard"], version = "^0.141.1"}
