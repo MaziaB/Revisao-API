@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Opitional
+from typing import Optional
 
 app = FastAPI()
 
@@ -29,7 +29,7 @@ def post_livros(id_livro: int, livro: Livro):
     if id_livro in meus_livrozinhos:
         raise HTTPException(status_code=400, detail="Esse livro já está cadastrado!")
     else:
-        meus_livrozinhos[id_livro] = livro.dict()
+        meus_livrozinhos[id_livro] = livro
         return {"message": "Livro adicionado com sucesso!"}
 
 
@@ -39,7 +39,7 @@ def put_livros(id_livro: int, livro: Livro):
     if not meu_livro:
         raise HTTPException(status_code=404, detail="Livro não encontrado!")
     else:
-        meu_livro[id_livro] = livro.dict()
+        meus_livrozinhos[id_livro] = livro
 
         return {"message": "As informações do livro foram atualizadas com sucesso!"}
 
