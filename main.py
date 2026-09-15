@@ -29,14 +29,27 @@ app = FastAPI(
 
 meus_livrozinhos = {}
 
-class Livro(Base):
+class LivroDB(Base):
     __tablename__="Livros"
     id = Column(Integer, primary_key=True, index=True)
     nome_livro = Column(String, index=True)
     autor_livro = Column(String, index=True)
     ano_livro = Column(Integer)
 
+class Livro(BaseModel):
+    nome_livro: str
+    autor_livro: str
+    ano_livro: int
+
 Base.metadata.create_all(bind=engine)
+
+def sessao_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 def autenticar_meu_usuario(credentials: HTTPBasicCredentials = Depends(security)):
     is_username_correct = secrets.compare_digest(credentials.username, MEU_USUARIO)
