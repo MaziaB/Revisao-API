@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = "sqlite:///./livros.db"
 
+# Criação do bd local
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -28,10 +29,14 @@ app = FastAPI(
 
 meus_livrozinhos = {}
 
-class Livro(BaseModel):
-    nome_livro: str
-    autor_livro: str
-    ano_livro: int
+class Livro(Base):
+    __tablename__="Livros"
+    id = Column(Integer, primary_key=True, index=True)
+    nome_livro = Column(String, index=True)
+    autor_livro = Column(String, index=True)
+    ano_livro = Column(Integer)
+
+Base.metadata.create_all(bind=engine)
 
 def autenticar_meu_usuario(credentials: HTTPBasicCredentials = Depends(security)):
     is_username_correct = secrets.compare_digest(credentials.username, MEU_USUARIO)
