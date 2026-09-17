@@ -69,28 +69,22 @@ def hello_world():
 
 
 @app.get("/Livros")
-def get_livros(page: int = 1, limit: int = 10, credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
+def get_livros(page: int = 1, db: Session = Depends(sessao_db), limit: int = 10, credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
     if page < 1 or limit < 1:
         raise HTTPException(status_code=400, detail="page ou limit com valores inválidos!")
+
+    livros = db.query(LivroDB).offset((page - 1)* limit).limit(limit).all()
     
-    if not meus_livrozinhos:
+    if not livros:
         return {"message": "Nenhum livro cadastrado"}
 
-    start = (page - 1) * limit
-    end = start + limit
-
-    livros_ordenados = sorted(meus_livrozinhos.items(), key=lambda x: x[0])
-
-    livros_paginados = [
-        {"id": id_livro, "nome_livro": livro_data.nome_livro, "autor_livro": livro_data.autor_livro, "ano_livro": livro_data.ano_livro}
-        for id_livro, livro_data in livros_ordenados[start:end]
-    ]
+    total_livros = db.query(LivroDB).count()
 
     return {
         "page": page,
         "limit": limit,
-        "total": len(meus_livrozinhos),
-        "livros": livros_paginados
+        "total": total_livros,
+        "livros": [{"id": livro.id, "nome_livro": livro.nome_livro, "autor_livro": livro.autor_livro, "ano_livro": livro.ano_livro} for livro in livros]
     }
 
 
