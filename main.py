@@ -89,30 +89,39 @@ def get_livros(page: int = 1, db: Session = Depends(sessao_db), limit: int = 10,
 
 
 @app.post("/adiciona")
-def post_livros(id_livro: int, livro: Livro, credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
-    if id_livro in meus_livrozinhos:
-        raise HTTPException(status_code=400, detail="Esse livro já está cadastrado!")
-    else:
-        meus_livrozinhos[id_livro] = livro
-        return {"message": "Livro adicionado com sucesso!"}
+def post_livros(livro: Livro, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
+    db_livro = db.query(LivroDB).filter(LivroDB.nome_livro == livro.nome_livro, LivroDB.autor_livro == livro.autor_livro).first()
+    if db_livro:
+        raise HTTPException(status_code=400, detail="Livro já cadastrado!")
+
+    novo_livro = LivroDB(nome_livro=livro.nome_livro, autor_livro=livro.autor_livro, ano_livro=livro.ano_livro)
+    db.add(novo_livro)
+    db.commit()
+    db.refresh(novo_livro)
+
+    return {"message": "Livro cadastrado com sucesso!"}
 
 
 @app.put("/atualiza/{id_livro}")
-def put_livros(id_livro: int, livro: Livro, credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
-    meu_livro = meus_livrozinhos.get(id_livro)
-    if not meu_livro:
-        raise HTTPException(status_code=404, detail="Livro não encontrado!")
-    else:
-        meus_livrozinhos[id_livro] = livro
+def put_livros(id_livro: int, livro: Livro, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
+    db_livro = db.query(LivroDB).filter(LivroDB.id == id_livro).first()
+    if not db_livro:
+        raise HTTPException(status_code=404, detail="Livro não cadastrado!")
 
-        return {"message": "As informações do livro foram atualizadas com sucesso!"}
+    db_livro.nome_livro = livro.nome_livro
+    db_livro.autor_livro = livro.autor_livro
+    db_livro.ano_livro = livro.ano_livro
+    db.commit()
+    db.refresh(db_livro)
 
 
 @app.delete("/deletar/{id_livro}")
-def delete_livro(id_livro: int, credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
-    if id_livro not in meus_livrozinhos:
-        raise HTTPException(status_code=404, detail="Livro não cadastrado")
-    else:
-        del meus_livrozinhos[id_livro]
+def delete_livro(id_livro: int, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
+    db_livro = db.query(LivroDB).filter(LivroDB.id == id_livro).first()
+    if not db_livro:
+        raise HTTPException(status_code=404, detail="Livro não cadastrado!")
 
-    return {"message": "Livro deletado com sucesso!"}
+    db.delete(db_livro)
+    db.commit()
+
+    return {"message": "Livro excluído com sucesso!"}
