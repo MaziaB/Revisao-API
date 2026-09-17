@@ -7,7 +7,7 @@ import os
 
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 DATABASE_URL = "sqlite:///./livros.db"
 
@@ -26,8 +26,6 @@ app = FastAPI(
     description="API para gerenciamento de acervo de bibliotecas",
     version="1.0.0"
 )
-
-meus_livrozinhos = {}
 
 class LivroDB(Base):
     __tablename__="Livros"
@@ -113,6 +111,8 @@ def put_livros(id_livro: int, livro: Livro, db: Session = Depends(sessao_db), cr
     db_livro.ano_livro = livro.ano_livro
     db.commit()
     db.refresh(db_livro)
+
+    return {"Message": "Livro atualizado com sucesso!"}
 
 
 @app.delete("/deletar/{id_livro}")
