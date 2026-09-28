@@ -125,3 +125,4 @@ def delete_livro(id_livro: int, db: Session = Depends(sessao_db), credentials: H
     db.commit()
 
     return {"message": "Livro excluído com sucesso!"}
+
