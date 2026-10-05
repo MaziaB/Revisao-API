@@ -8,3 +8,4 @@ requires-python = ">=3.10"
 fastapi = {extras = ["standard"], version = "^0.141.1"}
 sqlalchemy = "^2.0.53"
 aiosqlite = "^0.22.1"
+redis = "^8.1.0"

@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import Optional
 import secrets
 import os
+import redis
+import json
 
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -16,6 +18,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 MEU_USUARIO = os.getenv("MEU_USUARIO")
 MINHA_SENHA = os.getenv("MINHA_SENHA")
@@ -42,6 +46,12 @@ class Livro(BaseModel):
 
 Base.metadata.create_all(bind=engine)
 
+def salvar_livro_redis(livro_id: int, livro: Livro):
+    redis_client.set(f"livro:{livro_id}", livro.model_dump())
+
+def deletar_livro_redis(livro_id: int):
+    redis_client.delete(f"livro:{livro_id}")
+
 def sessao_db():
     db = SessionLocal()
     try:
@@ -65,6 +75,17 @@ def autenticar_meu_usuario(credentials: HTTPBasicCredentials = Depends(security)
 @app.get("/")
 def hello_world():
     return {"Hello": "World"}
+
+@app.get("/debug/redis")
+def ver_livros_redis():
+    chaves = redis_client.keys("livro:*")
+    livros = []
+
+    for chave in chaves:
+        valor = redis_client.get(chave)
+        livros.append({"chave": chave, "valor": json.loads(valor)})
+
+    return livros
 
 async def chamadas_externas_1():
     await asyncio.sleep(2)
@@ -125,6 +146,8 @@ async def post_livros(livro: Livro, db: Session = Depends(sessao_db), credential
     db.commit()
     db.refresh(novo_livro)
 
+    salvar_livro_redis(novo_livro.id, livro)
+
     return {"message": "Livro cadastrado com sucesso!"}
 
 
@@ -152,5 +175,7 @@ async def delete_livro(id_livro: int, db: Session = Depends(sessao_db), credenti
     db.delete(db_livro)
     db.commit()
 
+    deletar_livro_redis(id_livro)
+    
     return {"message": "Livro excluído com sucesso!"}
 

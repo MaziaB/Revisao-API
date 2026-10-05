@@ -35,3 +35,29 @@ async def consultar_precos():
         "api1": resposta1.json(),
         "api2": resposta2.json(),
     }
+
+# Exemplo de uma corrotina:
+def minha_corrotina():
+    print("Início")
+    yield
+    print("Depois do yield")
+
+coro = minha_corrotina()
+next(coro)   # Início
+next(coro)   # Depois do yield
+
+# Segundo exemplo:
+async def tarefa1():
+    print("Tarefa1 iniciando")
+    await asyncio.sleep(2)
+    print("Tarefa1 terminando")
+
+async def tarefa2():
+    print("Tarefa2 iniciando")
+    await asyncio.sleep(1)
+    print("Tarefa2 terminando")
+
+async def main():
+    await asyncio.gather(tarefa1(), tarefa2())
+
+asyncio.run(main())
