@@ -78,14 +78,16 @@ def hello_world():
 
 @app.get("/debug/redis")
 def ver_livros_redis():
-    chaves = redis_client.keys("livro:*")
+    chaves = redis_client.keys("livros:*")
     livros = []
 
     for chave in chaves:
         valor = redis_client.get(chave)
-        livros.append({"chave": chave, "valor": json.loads(valor)})
+        ttl = redis_client.ttl(chave)
 
-    return livros
+        livros.append({"chave": chave, "valor": json.loads(valor), "ttl": ttl})
+
+        return livros
 
 async def chamadas_externas_1():
     await asyncio.sleep(2)
@@ -116,24 +118,45 @@ async def chamadas_externas():
 
 
 @app.get("/Livros")
-async def get_livros(page: int = 1, db: Session = Depends(sessao_db), limit: int = 10, credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
+def get_livros(
+    page: int = 1,
+    limit: int = 10,
+    db: Session = Depends(sessao_db),
+    credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario)
+):
     if page < 1 or limit < 1:
-        raise HTTPException(status_code=400, detail="page ou limit com valores inválidos!")
+        raise HTTPException(status_code=400, detail="page ou limit com valores inválidos")
 
-    livros = db.query(LivroDB).offset((page - 1)* limit).limit(limit).all()
-    
+    cache_key = f"livros:page={page}&limit={limit}"
+    cached = redis_client.get(cache_key)
+
+    if cached:
+        return json.loads(cached)
+
+    livros = db.query(LivroDB).offset((page - 1) * limit).limit(limit).all()
+
     if not livros:
-        return {"message": "Nenhum livro cadastrado"}
+        return {"message": "Nenhum livro cadastrado!"}
 
     total_livros = db.query(LivroDB).count()
 
-    return {
+    resposta = {
         "page": page,
         "limit": limit,
-        "total": total_livros,
-        "livros": [{"id": livro.id, "nome_livro": livro.nome_livro, "autor_livro": livro.autor_livro, "ano_livro": livro.ano_livro} for livro in livros]
+        "total_livros": total_livros,
+        "livros": [
+            {
+                "id": livro.id,
+                "nome_livro": livro.nome_livro,
+                "autor_livro": livro.autor_livro,
+                "ano_livro": livro.ano_livro
+            } for livro in livros
+        ]
     }
 
+    redis_client.setex(cache_key, 30, json.dumps(resposta))
+
+    return resposta
 
 @app.post("/adiciona")
 async def post_livros(livro: Livro, db: Session = Depends(sessao_db), credentials: HTTPBasicCredentials = Depends (autenticar_meu_usuario)):
