@@ -6,6 +6,10 @@ import secrets
 import os
 import redis
 import json
+from fastapi import BackgroundTasks
+from tasks import fatorial, somar
+from celery_app import celery_app
+from celery.result import AsyncResult
 
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,7 +23,7 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+redis_client = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
 
 MEU_USUARIO = os.getenv("MEU_USUARIO")
 MINHA_SENHA = os.getenv("MINHA_SENHA")
@@ -75,6 +79,23 @@ def autenticar_meu_usuario(credentials: HTTPBasicCredentials = Depends(security)
 @app.get("/")
 def hello_world():
     return {"Hello": "World"}
+
+@app.post("/calcular/soma")
+def calcular_soma(a: int, b: int):
+    tarefa = somar.delay(a,b)
+    return {
+        "task_id": tarefa.id,
+        "message": "Tarefa soma enviada para execução" 
+    }
+
+@app.post("/calcular/fatorial")
+def calcular_fatorial(n: int):
+    tarefa = fatorial.delay(n)
+    return {
+        "task_id": tarefa.id,
+        "message": "Tarefa fatorial enviada para execução"
+    }
+
 
 @app.get("/debug/redis")
 def ver_livros_redis():
