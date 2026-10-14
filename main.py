@@ -23,7 +23,10 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-redis_client = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
 
 MEU_USUARIO = os.getenv("MEU_USUARIO")
 MINHA_SENHA = os.getenv("MINHA_SENHA")
@@ -83,6 +86,8 @@ def hello_world():
 @app.post("/calcular/soma")
 def calcular_soma(a: int, b: int):
     tarefa = somar.delay(a,b)
+    redis_client.lpush("tarefas_ids", tarefa.id)
+    redis_client.ltrim("tarefas_ids", 0, 49)
     return {
         "task_id": tarefa.id,
         "message": "Tarefa soma enviada para execução" 
@@ -91,11 +96,29 @@ def calcular_soma(a: int, b: int):
 @app.post("/calcular/fatorial")
 def calcular_fatorial(n: int):
     tarefa = fatorial.delay(n)
+    redis_client.lpush("tarefas_ids", tarefa.id)
+    redis_client.ltrim("tarefas_ids", 0, 49)
     return {
         "task_id": tarefa.id,
         "message": "Tarefa fatorial enviada para execução"
     }
 
+@app.get("/tarefas/recentes")
+def listar_tarefas_recentes():
+    ids = redis_client.lrange("tarefas_ids", 0, -1)
+    tarefas = []
+
+    for task_id in ids:
+        resultado = AsyncResult(task_id, app=celery_app)
+        tarefas.append({
+            "task_id": task_id,
+            "status": resultado.status,
+            "resultado": resultado.result if resultado.sucessful() else None 
+        })
+
+    return {
+        "tarefas": tarefas
+    }    
 
 @app.get("/debug/redis")
 def ver_livros_redis():
