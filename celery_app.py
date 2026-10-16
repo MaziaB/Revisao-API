@@ -6,9 +6,9 @@ REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0") 
 
 celery_app = Celery(
-    "tarefas_livros",
-    broker="redis://redis:6379/0",
-    backend="redis://redis:6379/0"
+    "livros",
+    broker = os.getenv("CELERY_BROKER_URL"),
+    backend = os.getenv("CELERY_RESULT_BACKEND"),
 )
 
 celery_app.conf.update(
