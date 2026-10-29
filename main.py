@@ -251,4 +251,3 @@ async def delete_livro(id_livro: int, db: Session = Depends(sessao_db), credenti
     deletar_livro_redis(id_livro)
     
     return {"message": "Livro excluído com sucesso!"}
-
